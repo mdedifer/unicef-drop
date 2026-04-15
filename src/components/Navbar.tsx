@@ -34,14 +34,21 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-dark/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-4">
-          <span className="font-display text-2xl font-bold tracking-widest text-neon-cyan glow-cyan">DROP</span>
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/drop-logo.png"
+            alt="UNICEF DROP"
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
+          <span className="font-display text-xl font-bold tracking-widest text-neon-cyan glow-cyan">DROP</span>
           <span className="h-5 w-px bg-white/15" />
           <Image
             src="/unicef-logo.png"
             alt="UNICEF"
-            width={90}
-            height={26}
+            width={80}
+            height={23}
             className="brightness-0 invert opacity-50"
           />
         </Link>
