@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 
 const links = [
   { href: "/", label: "Inicio" },
+  { href: "/#drops", label: "Drops" },
   { href: "/participar", label: "Participar" },
   { href: "/proyectos", label: "Proyectos" },
   { href: "/ganadores", label: "Premios" },
@@ -55,19 +56,24 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-8">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-medium tracking-wide transition-colors ${
-                pathname === link.href
-                  ? "text-neon-cyan glow-cyan"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const isActive = link.href.startsWith("/#")
+              ? false
+              : pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm font-medium tracking-wide transition-colors ${
+                  isActive
+                    ? "text-neon-cyan glow-cyan"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
 
           {user && (
             <Link

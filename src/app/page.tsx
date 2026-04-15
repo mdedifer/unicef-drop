@@ -169,7 +169,7 @@ export default function Landing() {
       </section>
 
       {/* DROPS ACTIVOS */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
+      <section id="drops" className="mx-auto max-w-6xl px-6 py-24 scroll-mt-24">
         <div className="mb-16 text-center">
           <div className="mb-4 inline-flex rounded-full border border-neon-cyan/20 bg-neon-cyan/5 px-5 py-2">
             <span className="font-display text-xs tracking-[0.3em] text-neon-cyan uppercase">
