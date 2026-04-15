@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "DROP — UNICEF Hackathon",
   description:
     "La plataforma donde los jóvenes españoles compiten para cambiar el mundo.",
+  icons: {
+    icon: "/drop-logo.png",
+    apple: "/drop-logo.png",
+  },
 };
 
 export default function RootLayout({
