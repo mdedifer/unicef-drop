@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { getUser } from "@/lib/auth";
-import { User } from "@/lib/data";
+import { onAuthChange, getUserName } from "@/lib/auth";
+import type { User } from "@supabase/supabase-js";
 
 const links = [
   { href: "/", label: "Inicio" },
@@ -19,11 +19,12 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    setUser(getUser());
-  }, [pathname]);
+    const { data: { subscription } } = onAuthChange((u) => setUser(u));
+    return () => subscription.unsubscribe();
+  }, []);
 
   const initials = user
-    ? user.name
+    ? getUserName(user)
         .split(" ")
         .map((w) => w[0])
         .join("")
@@ -76,7 +77,7 @@ export default function Navbar() {
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neon-cyan/20 font-display text-[10px] font-bold text-neon-cyan">
                 {initials}
               </span>
-              <span className="text-xs text-white/60">{user.name.split(" ")[0]}</span>
+              <span className="text-xs text-white/60">{getUserName(user).split(" ")[0]}</span>
             </Link>
           )}
         </div>

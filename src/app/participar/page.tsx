@@ -1,28 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from "@/lib/data";
-import { getUser, logout } from "@/lib/auth";
-import { getDraft } from "@/lib/storage";
+import { onAuthChange, getUser as fetchUser, getUserName } from "@/lib/auth";
+import { getDraft, type DraftRow } from "@/lib/storage";
 import LoginForm from "./components/LoginForm";
 import Dashboard from "./components/Dashboard";
 import DesignThinkingWizard from "./components/DesignThinkingWizard";
+import type { User } from "@supabase/supabase-js";
 
 type View = "loading" | "login" | "dashboard" | "wizard";
 
 export default function Participar() {
   const [view, setView] = useState<View>("loading");
   const [user, setUser] = useState<User | null>(null);
-  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [activeDraft, setActiveDraft] = useState<DraftRow | null>(null);
 
   useEffect(() => {
-    const u = getUser();
-    if (u) {
+    // Check initial session
+    fetchUser().then((u) => {
+      if (u) {
+        setUser(u);
+        setView("dashboard");
+      } else {
+        setView("login");
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = onAuthChange((u) => {
       setUser(u);
-      setView("dashboard");
-    } else {
-      setView("login");
-    }
+      if (u) {
+        setView("dashboard");
+      } else {
+        setView("login");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   function handleLogin(u: User) {
@@ -31,36 +45,44 @@ export default function Participar() {
   }
 
   function handleLogout() {
-    logout();
     setUser(null);
+    setActiveDraft(null);
     setView("login");
   }
 
-  function handleEditDraft(draftId: string) {
-    setActiveDraftId(draftId);
-    setView("wizard");
+  async function handleEditDraft(draftId: string) {
+    const draft = await getDraft(draftId);
+    if (draft) {
+      setActiveDraft(draft);
+      setView("wizard");
+    }
   }
 
   function handleBackToDashboard() {
-    setActiveDraftId(null);
+    setActiveDraft(null);
     setView("dashboard");
   }
 
   if (view === "loading") {
-    return <div className="flex min-h-[80vh] items-center justify-center" />;
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center">
+        <span className="font-display text-sm text-white/30">Cargando...</span>
+      </div>
+    );
   }
 
   if (view === "login") {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  if (view === "wizard" && activeDraftId) {
-    const draft = getDraft(activeDraftId);
-    if (!draft) {
-      setView("dashboard");
-      return null;
-    }
-    return <DesignThinkingWizard draft={draft} onBack={handleBackToDashboard} />;
+  if (view === "wizard" && activeDraft && user) {
+    return (
+      <DesignThinkingWizard
+        draft={activeDraft}
+        userId={user.id}
+        onBack={handleBackToDashboard}
+      />
+    );
   }
 
   if (view === "dashboard" && user) {

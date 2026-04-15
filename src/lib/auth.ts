@@ -1,35 +1,53 @@
-import { User } from "./data";
+import { supabase } from "./supabase";
+import type { User } from "@supabase/supabase-js";
 
-const USER_KEY = "drop-user";
+export type { User };
 
-export function login(name: string, email: string): User {
-  // Check if user with this email already exists
-  const existing = getUser();
-  if (existing && existing.email === email) {
-    return existing;
-  }
-
-  const user: User = {
-    id: `user-${Date.now()}`,
-    name,
+export async function signUp(
+  name: string,
+  email: string,
+  password: string
+): Promise<{ user: User | null; error: string | null }> {
+  const { data, error } = await supabase.auth.signUp({
     email,
-    createdAt: new Date().toISOString(),
-  };
+    password,
+    options: { data: { name } },
+  });
 
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-  return user;
+  if (error) return { user: null, error: error.message };
+  return { user: data.user, error: null };
 }
 
-export function logout(): void {
-  localStorage.removeItem(USER_KEY);
+export async function signIn(
+  email: string,
+  password: string
+): Promise<{ user: User | null; error: string | null }> {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) return { user: null, error: error.message };
+  return { user: data.user, error: null };
 }
 
-export function getUser(): User | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
 }
 
-export function isLoggedIn(): boolean {
-  return getUser() !== null;
+export async function getUser(): Promise<User | null> {
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+}
+
+export function onAuthChange(
+  callback: (user: User | null) => void
+) {
+  return supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user ?? null);
+  });
+}
+
+export function getUserName(user: User): string {
+  return user.user_metadata?.name || user.email?.split("@")[0] || "Usuario";
 }

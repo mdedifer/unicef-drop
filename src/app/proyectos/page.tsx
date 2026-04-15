@@ -2,20 +2,34 @@
 
 import { useState, useEffect } from "react";
 import ProjectCard from "@/components/ProjectCard";
-import { getProjects } from "@/lib/storage";
-import { Project } from "@/lib/data";
+import { getProjects, type ProjectRow } from "@/lib/storage";
+import { getUser } from "@/lib/auth";
 
 export default function Proyectos() {
-  const [projects, setProjects] = useState<Project[]>([]);
-
-  function loadProjects() {
-    const all = getProjects().sort((a, b) => b.votes - a.votes);
-    setProjects(all);
-  }
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadProjects();
+    Promise.all([getProjects(), getUser()]).then(([p, u]) => {
+      setProjects(p);
+      setUserId(u?.id ?? null);
+      setLoading(false);
+    });
   }, []);
+
+  async function reload() {
+    const p = await getProjects();
+    setProjects(p);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <span className="font-display text-sm text-white/30">Cargando proyectos...</span>
+      </div>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-16">
@@ -45,7 +59,7 @@ export default function Proyectos() {
             className="animate-fade-in-up"
             style={{ animationDelay: `${i * 0.1}s` }}
           >
-            <ProjectCard project={project} onVote={loadProjects} />
+            <ProjectCard project={project} userId={userId} onVote={reload} />
           </div>
         ))}
       </div>

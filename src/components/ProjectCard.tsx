@@ -1,25 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Project } from "@/lib/data";
-import { voteProject, hasVoted } from "@/lib/storage";
+import { voteProject, hasVoted, type ProjectRow } from "@/lib/storage";
 
 interface ProjectCardProps {
-  project: Project;
+  project: ProjectRow;
+  userId: string | null;
   onVote: () => void;
 }
 
-export default function ProjectCard({ project, onVote }: ProjectCardProps) {
+export default function ProjectCard({ project, userId, onVote }: ProjectCardProps) {
   const [voted, setVoted] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    setVoted(hasVoted(project.id));
-  }, [project.id]);
+    if (!userId) {
+      setChecking(false);
+      return;
+    }
+    hasVoted(project.id, userId).then((v) => {
+      setVoted(v);
+      setChecking(false);
+    });
+  }, [project.id, userId]);
 
-  function handleVote() {
-    if (voted) return;
-    const success = voteProject(project.id);
+  async function handleVote() {
+    if (voted || !userId) return;
+    const success = await voteProject(project.id, userId);
     if (success) {
       setVoted(true);
       setAnimating(true);
@@ -38,14 +46,14 @@ export default function ProjectCard({ project, onVote }: ProjectCardProps) {
           {project.team}
         </h3>
         <span className="text-xs text-white/30">
-          {new Date(project.createdAt).toLocaleDateString("es-ES")}
+          {new Date(project.created_at).toLocaleDateString("es-ES")}
         </span>
       </div>
 
-      {project.image && (
+      {project.image_url && (
         <div className="mb-4 overflow-hidden rounded-lg">
           <img
-            src={project.image}
+            src={project.image_url}
             alt={project.team}
             className="h-40 w-full object-cover"
           />
@@ -70,17 +78,19 @@ export default function ProjectCard({ project, onVote }: ProjectCardProps) {
       <div className="flex items-center justify-between border-t border-white/5 pt-4">
         <button
           onClick={handleVote}
-          disabled={voted}
+          disabled={voted || !userId || checking}
           className={`flex items-center gap-2 rounded-lg border px-4 py-2 font-display text-sm font-bold tracking-wider uppercase transition-all duration-300 ${
             voted
               ? "border-neon-violet/30 bg-neon-violet/10 text-neon-violet cursor-default"
-              : "border-white/10 bg-white/5 text-white/60 hover:border-neon-violet/50 hover:bg-neon-violet/10 hover:text-neon-violet hover:shadow-[0_0_20px_#a855f733] cursor-pointer"
+              : !userId
+                ? "border-white/5 bg-white/5 text-white/20 cursor-not-allowed"
+                : "border-white/10 bg-white/5 text-white/60 hover:border-neon-violet/50 hover:bg-neon-violet/10 hover:text-neon-violet hover:shadow-[0_0_20px_#a855f733] cursor-pointer"
           } ${animating ? "scale-110" : ""}`}
         >
           <span className={`text-lg transition-transform ${animating ? "scale-125" : ""}`}>
             {voted ? "💜" : "🤍"}
           </span>
-          <span>{voted ? "Votado" : "Votar"}</span>
+          <span>{voted ? "Votado" : !userId ? "Login para votar" : "Votar"}</span>
         </button>
 
         <div className="flex items-center gap-2">

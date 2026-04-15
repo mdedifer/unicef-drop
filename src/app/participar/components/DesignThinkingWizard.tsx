@@ -4,8 +4,8 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import GlowButton from "@/components/GlowButton";
 import WizardStep from "./WizardStep";
-import { Draft, activeDrops } from "@/lib/data";
-import { updateDraft, submitDraft } from "@/lib/storage";
+import { activeDrops } from "@/lib/data";
+import { updateDraft, submitDraft, type DraftRow } from "@/lib/storage";
 
 const STEPS = [
   {
@@ -61,54 +61,60 @@ const STEPS = [
 ];
 
 interface WizardProps {
-  draft: Draft;
+  draft: DraftRow;
+  userId: string;
   onBack: () => void;
 }
 
-export default function DesignThinkingWizard({ draft, onBack }: WizardProps) {
+export default function DesignThinkingWizard({ draft, userId, onBack }: WizardProps) {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(draft.currentStep);
+  const [currentStep, setCurrentStep] = useState(draft.current_step);
   const [fields, setFields] = useState({
     empathize: draft.empathize,
     define: draft.define,
     ideate: draft.ideate,
-    ideateImage: draft.ideateImage,
+    ideate_image_url: draft.ideate_image_url,
     prototype: draft.prototype,
     test: draft.test,
   });
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const drop = activeDrops.find((d) => d.id === draft.dropId) || activeDrops[0];
+  const drop = activeDrops.find((d) => d.id === draft.drop_id) || activeDrops[0];
 
-  const save = useCallback((step?: number) => {
+  const save = useCallback(async (step?: number) => {
     setSaving(true);
-    updateDraft(draft.id, {
-      ...fields,
-      currentStep: step ?? currentStep,
+    await updateDraft(draft.id, {
+      empathize: fields.empathize,
+      define: fields.define,
+      ideate: fields.ideate,
+      ideate_image_url: fields.ideate_image_url,
+      prototype: fields.prototype,
+      test: fields.test,
+      current_step: step ?? currentStep,
     });
     setTimeout(() => setSaving(false), 500);
   }, [draft.id, fields, currentStep]);
 
-  function goNext() {
+  async function goNext() {
     if (currentStep < 4) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
-      save(nextStep);
+      await save(nextStep);
     }
   }
 
-  function goPrev() {
+  async function goPrev() {
     if (currentStep > 0) {
       const prevStep = currentStep - 1;
       setCurrentStep(prevStep);
-      save(prevStep);
+      await save(prevStep);
     }
   }
 
-  function handleSubmit() {
-    save();
-    submitDraft(draft.id);
+  async function handleSubmit() {
+    await save();
+    await submitDraft(draft.id, userId);
     setSubmitted(true);
     setTimeout(() => router.push("/proyectos"), 2000);
   }
@@ -142,9 +148,7 @@ export default function DesignThinkingWizard({ draft, onBack }: WizardProps) {
           ← Volver al panel
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-white/20">
-            {drop.title}
-          </span>
+          <span className="text-xs text-white/20">{drop.title}</span>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-display text-xs text-white/40">
             {draft.team}
           </span>
@@ -160,7 +164,7 @@ export default function DesignThinkingWizard({ draft, onBack }: WizardProps) {
             return (
               <div key={s.title} className="flex flex-1 items-center">
                 <button
-                  onClick={() => { save(); setCurrentStep(i); }}
+                  onClick={async () => { await save(); setCurrentStep(i); }}
                   className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all cursor-pointer ${
                     isActive
                       ? "border-neon-cyan bg-neon-cyan/10 text-neon-cyan scale-110"
@@ -201,8 +205,8 @@ export default function DesignThinkingWizard({ draft, onBack }: WizardProps) {
         value={fields[step.field]}
         onChange={(val) => setFields({ ...fields, [step.field]: val })}
         showImage={currentStep === 2}
-        image={fields.ideateImage}
-        onImageChange={(url) => setFields({ ...fields, ideateImage: url })}
+        image={fields.ideate_image_url || undefined}
+        onImageChange={(url) => setFields({ ...fields, ideate_image_url: url })}
       />
 
       {/* Navigation */}
@@ -219,7 +223,7 @@ export default function DesignThinkingWizard({ draft, onBack }: WizardProps) {
           {saving && (
             <span className="text-xs text-neon-cyan/50">Guardado ✓</span>
           )}
-          <GlowButton onClick={() => { save(); onBack(); }} color="violet" size="sm">
+          <GlowButton onClick={async () => { await save(); onBack(); }} color="violet" size="sm">
             Guardar borrador
           </GlowButton>
           {isLast ? (

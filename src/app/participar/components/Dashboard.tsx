@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import GlowButton from "@/components/GlowButton";
-import { User, Draft, activeDrops } from "@/lib/data";
-import { getDrafts, createDraft } from "@/lib/storage";
-import { logout } from "@/lib/auth";
+import { activeDrops } from "@/lib/data";
+import { getDrafts, createDraft, type DraftRow } from "@/lib/storage";
+import { signOut, getUserName } from "@/lib/auth";
+import type { User } from "@supabase/supabase-js";
 
 interface DashboardProps {
   user: User;
@@ -14,20 +15,42 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, onLogout, onEditDraft, onNewDraft }: DashboardProps) {
-  const [drafts] = useState<Draft[]>(() => getDrafts(user.id));
+  const [drafts, setDrafts] = useState<DraftRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedDrop, setSelectedDrop] = useState(activeDrops[0].id);
-  const [teamName, setTeamName] = useState(user.name);
+  const [teamName, setTeamName] = useState(getUserName(user));
 
-  function handleCreate(e: React.FormEvent) {
+  useEffect(() => {
+    getDrafts(user.id).then((d) => {
+      setDrafts(d);
+      setLoading(false);
+    });
+  }, [user.id]);
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!teamName.trim()) return;
-    const draft = createDraft(user.id, selectedDrop, teamName.trim());
-    onNewDraft(draft.id);
+    const draft = await createDraft(user.id, selectedDrop, teamName.trim());
+    if (draft) onNewDraft(draft.id);
+  }
+
+  async function handleLogout() {
+    await signOut();
+    onLogout();
   }
 
   const activeDrafts = drafts.filter((d) => d.status === "draft");
   const submitted = drafts.filter((d) => d.status === "submitted");
+  const userName = getUserName(user);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <span className="font-display text-sm text-white/30">Cargando...</span>
+      </div>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-16">
@@ -36,11 +59,11 @@ export default function Dashboard({ user, onLogout, onEditDraft, onNewDraft }: D
         <div>
           <p className="text-sm text-white/40">Panel de participante</p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-wider md:text-4xl">
-            Hola, <span className="text-neon-cyan">{user.name}</span>
+            Hola, <span className="text-neon-cyan">{userName}</span>
           </h1>
         </div>
         <button
-          onClick={onLogout}
+          onClick={handleLogout}
           className="text-xs text-white/30 hover:text-white/60 transition-colors cursor-pointer"
         >
           Cerrar sesión
@@ -112,17 +135,16 @@ export default function Dashboard({ user, onLogout, onEditDraft, onNewDraft }: D
           </h2>
           <div className="grid gap-4">
             {activeDrafts.map((draft) => {
-              const drop = activeDrops.find((d) => d.id === draft.dropId) || activeDrops[0];
+              const drop = activeDrops.find((d) => d.id === draft.drop_id) || activeDrops[0];
               return (
                 <div
                   key={draft.id}
                   className="flex items-center justify-between rounded-xl border border-white/5 bg-dark-card p-5 transition-all hover:border-neon-cyan/20"
                 >
                   <div className="flex items-center gap-4">
-                    {/* Progress circle */}
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-neon-violet/30 bg-neon-violet/10">
                       <span className="font-display text-sm font-bold text-neon-violet">
-                        {draft.currentStep + 1}/5
+                        {draft.current_step + 1}/5
                       </span>
                     </div>
                     <div>
@@ -130,13 +152,13 @@ export default function Dashboard({ user, onLogout, onEditDraft, onNewDraft }: D
                         {draft.team}
                       </p>
                       <p className="text-xs text-white/30">
-                        {drop.title} · Fase {draft.currentStep + 1} de 5
+                        {drop.title} · Fase {draft.current_step + 1} de 5
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-white/20">
-                      {new Date(draft.updatedAt).toLocaleDateString("es-ES")}
+                      {new Date(draft.updated_at).toLocaleDateString("es-ES")}
                     </span>
                     <GlowButton onClick={() => onEditDraft(draft.id)} color="violet" size="sm">
                       Continuar
@@ -157,7 +179,7 @@ export default function Dashboard({ user, onLogout, onEditDraft, onNewDraft }: D
           </h2>
           <div className="grid gap-4">
             {submitted.map((draft) => {
-              const drop = activeDrops.find((d) => d.id === draft.dropId) || activeDrops[0];
+              const drop = activeDrops.find((d) => d.id === draft.drop_id) || activeDrops[0];
               return (
                 <div
                   key={draft.id}
